@@ -1,59 +1,69 @@
-%% Maranatha LMS — 3. Modul Absensi: internal (per pertemuan) dan eksternal (progres)
-%% Prinsip: kehadiran = check-in + jenis sesi; activity tracking hanya untuk progres dan analitik
+%% LMS Universitas Kristen Maranatha — 3. Modul Absensi
 flowchart TD
-  START(["Peserta terdaftar di course"]) --> MODE{"attendance_mode<br/>pada enrollment"}
+
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
+  end
+
+  START(["Peserta terdaftar di kelas"]):::start --> JP{"Jenis peserta"}
 
   %% ───────── INTERNAL ─────────
-  MODE -- "MEETING - internal" --> M0
-  subgraph INT["Internal - per pertemuan, dibuat dosen pengampu"]
+  subgraph INT["A. Mahasiswa internal: absensi per pertemuan"]
     direction TB
-    M0["Dosen membuat pertemuan ke-n<br/>jenis: TATAP_MUKA / DARING_SINKRON / ASINKRON<br/>jadwal, modul terkait, toleransi terlambat"] --> M1{"Jenis sesi"}
-    M1 -- "Tatap muka / Daring sinkron" --> M2["Dosen membuka check-in<br/>kode / QR dinamis atau tombol check-in"]
-    M2 --> M3{"Mahasiswa check-in<br/>dalam jendela waktu?"}
-    M3 -- Tidak --> M4["Check-in ditutup<br/>ajukan izin / koreksi ke dosen"]
-    M3 -- Ya --> M5{"checked_in_at &lt;= mulai + toleransi?"}
-    M5 -- Ya --> PRESENT(["PRESENT"])
-    M5 -- Tidak --> LATE(["LATE"])
-    M1 -- "Asinkron" --> M6{"Aktivitas wajib modul sesi ini<br/>selesai sebelum batas sesi?"}
-    M6 -- Ya --> PRESENT
-  end
+    D1["Dosen membuat pertemuan<br/>tatap muka / daring / asinkron"]:::decided
+    D1 --> D2{"Jenis pertemuan"}
+    D2 -- "Tatap muka" --> C1["Check-in dengan kode / QR<br/>yang berganti-ganti"]:::decided
+    D2 -- "Daring" --> C2["Check-in dengan tombol<br/>di sesi live"]:::decided
+    D2 -- "Asinkron" --> C3["Hadir jika aktivitas wajib<br/>selesai sebelum batas waktu"]:::decided
+    C1 --> ST{"Tepat waktu?"}
+    C2 --> ST
+    ST -- Ya --> H["HADIR"]:::good
+    ST -- Tidak --> L["TERLAMBAT"]:::warn
+    C3 --> H
+    DM["Dosen juga bisa mengisi manual"]:::decided
+    DM -.-> H
 
-  subgraph TUTUP["Penutupan sesi - dijalankan server"]
-    direction TB
-    Z1["Sesi mencapai batas waktu<br/>atau dosen menutup sesi"] --> Z2["Peserta tanpa status<br/>diberi ABSENT"]
-    Z2 --> Z3["Dosen koreksi bila perlu<br/>EXCUSED: izin / sakit + catatan<br/>tercatat di audit-log"]
-    Z3 --> Z4["Rekap: persentase kehadiran =<br/>PRESENT + LATE dibagi pertemuan selesai"]
-    Z4 --> Z5{"Memenuhi minimum kehadiran?<br/>misal 75 persen"}
-    Z5 -- Ya --> Z6["Boleh ikut UAS"]
-    Z5 -- Tidak --> Z7["Peringatan ke mahasiswa dan dosen<br/>status UAS sesuai kebijakan"]
+    H --> TUTUP["Sesi ditutup"]
+    L --> TUTUP
+    TUTUP --> ABSEN["Yang belum tercatat otomatis TIDAK HADIR"]:::bad
+    ABSEN --> IZIN["Izin / sakit / dispensasi<br/>usulan: ajukan dengan bukti, dosen mengubah status"]:::pending
+    IZIN --> REKAP["Rekap persentase kehadiran"]
+    REKAP --> MIN{"Memenuhi batas minimum kehadiran?"}
+    MIN -- Ya --> UAS["Boleh ikut UAS"]:::good
+    MIN -- Tidak --> UAS2["Tidak memenuhi syarat UAS"]:::bad
   end
-
-  PRESENT --> Z1
-  LATE --> Z1
-  M4 --> Z3
+  MINNOTE["Batas minimum diatur dosen;<br/>untuk internal: ikut peraturan kampus 75 persen?"]:::pending
+  MIN -.- MINNOTE
+  SRC["Sumber resmi absensi internal:<br/>LMS atau One Maranatha"]:::pending
+  SYNC["Sinkron absensi ke One Maranatha"]:::next
+  REKAP -.- SRC
+  SRC -.- SYNC
 
   %% ───────── EKSTERNAL ─────────
-  MODE -- "PROGRESS - eksternal" --> P0
-  subgraph EXT["Eksternal - progres aktivitas, bukan check-in"]
+  subgraph EXT["B. Peserta eksternal: progres, bukan absensi per pertemuan"]
     direction TB
-    P0["Event belajar dari Modul Pembelajaran<br/>lesson_completed, quiz_passed,<br/>assignment_approved"] --> P1["Catat activity_completions<br/>sekali per aktivitas"]
-    P1 --> P2["Progres = aktivitas wajib selesai<br/>dibagi total aktivitas wajib<br/>dihitung saat dibaca"]
-    P2 --> P3{"Mencapai minimum progres?"}
-    P3 -- Belum --> P4["Tampilkan sisa aktivitas wajib"]
-    P3 -- Ya --> P5["Syarat penyelesaian terpenuhi"]
-    P6["Opsional: ikut sesi live kelas campuran<br/>tercatat, tidak wajib"] -.-> P0
+    P1["Setiap aktivitas wajib yang selesai<br/>tercatat sebagai progres"]:::decided
+    P1 --> P2["Progres = aktivitas wajib selesai<br/>dibagi total aktivitas wajib"]
+    P2 --> P3{"Memenuhi batas minimum progres<br/>yang diatur dosen?"}:::decided
+    P3 -- Belum --> P4["Tampilkan sisa aktivitas"]
+    P3 -- Ya --> P5["Syarat penyelesaian terpenuhi"]:::good
+    P6["Perpanjangan deadline / masa akses<br/>oleh pengajar"]:::pending
+    P6 -.-> P1
   end
 
-  Z6 --> NIL["Ke Modul Penilaian"]
-  Z7 --> NIL
+  JP -- "Mahasiswa internal" --> D1
+  JP -- "Peserta eksternal" --> P1
+  UAS --> NIL["Ke Modul Penilaian"]:::start
+  UAS2 --> NIL
   P5 --> NIL
 
-  Z4 --> DASH["Dashboard<br/>dosen: rekap kehadiran dan progres<br/>peserta: status absensi / progres"]
-  P2 --> DASH
-
-  style START fill:#4F46E5,color:#fff
-  style PRESENT fill:#16A34A,color:#fff
-  style LATE fill:#F59E0B,color:#fff
-  style Z2 fill:#DC2626,color:#fff
-  style NIL fill:#7C3AED,color:#fff
-  style DASH fill:#0891B2,color:#fff
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef start fill:#1D4E89,color:#ffffff,stroke:#1D4E89
+  classDef good fill:#16A34A,color:#ffffff,stroke:#16A34A
+  classDef warn fill:#D97706,color:#ffffff,stroke:#D97706
+  classDef bad fill:#DC2626,color:#ffffff,stroke:#DC2626

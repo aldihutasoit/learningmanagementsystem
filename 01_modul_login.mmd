@@ -1,74 +1,60 @@
-%% Maranatha LMS — 1. Modul Login: internal (SAT / One Maranatha) dan eksternal (email)
-%% Render: https://mermaid.live
+%% LMS Universitas Kristen Maranatha — 1. Modul Login
 flowchart TD
 
-  START(["Pengguna membuka /login"]) --> TAB{"Pilih tab"}
-
-  %% ───────────── INTERNAL (SAT) ─────────────
-  TAB -- "Civitas Maranatha" --> I1["Browser: POST SAT /login<br/>username, password, version: latest"]
-  I1 --> I2{"SAT menerima?"}
-  I2 -- tidak --> IERR["Tampilkan: username / password SAT salah"]
-  I2 -- ya --> I3["Browser: POST /api/auth/sat/session<br/>body: bearer SAT"]
-  I3 --> I4["Backend: GET SAT /data dengan bearer<br/>bearer tidak disimpan"]
-  I4 --> I5{"isblocked = 0 dan permissions memuat<br/>MAHASISWA / DOSEN / LMSADMIN?"}
-  I5 -- tidak --> I403["403: akun tidak punya akses LMS"]
-  I5 -- ya --> I6["Upsert users + internal_accounts by om_user_id<br/>timpa nama, email, permissions, foto, synced_at<br/>users.roles = petakan permissions"]
-  I6 --> ST
-
-  %% ───────────── EKSTERNAL (EMAIL) ─────────────
-  TAB -- "Akun Eksternal" --> E1["Browser: POST /api/auth/login<br/>email, password"]
-  E1 --> E2{"Email ada di external_accounts?"}
-  E2 -- tidak --> EERR["401: email atau password salah<br/>pesan sama untuk semua kasus"]
-  E2 -- ya --> E3{"locked_until > sekarang?"}
-  E3 -- ya --> ELOCK["423: akun dikunci sementara, coba lagi nanti"]
-  E3 -- tidak --> E4{"Password cocok? bcrypt.compare"}
-  E4 -- tidak --> E5["failed_login_count + 1<br/>jika 5 kali atau lebih: locked_until = sekarang + 15 menit"]
-  E5 --> EERR
-  E4 -- ya --> E6{"email_verified_at terisi?"}
-  E6 -- tidak --> EVER["403: verifikasi email dulu<br/>tombol kirim ulang link"]
-  E6 -- ya --> E7["failed_login_count = 0, locked_until = NULL"]
-  E7 --> ST
-
-  %% ───────────── SESI (SAMA UNTUK KEDUANYA) ─────────────
-  ST{"users.status = active<br/>dan dflag = false?"}
-  ST -- tidak --> SUS["403: akun dinonaktifkan admin LMS"]
-  ST -- ya --> T1["TokenService<br/>access JWT 15 menit: sub, roles, user_type<br/>refresh token acak, simpan hash di refresh_tokens"]
-  T1 --> T2["Response: accessToken di body<br/>Set-Cookie refresh_token httpOnly"]
-  T2 --> T3["Update last_login_at<br/>catat audit-log LOGIN"]
-  T3 --> R{"Jumlah roles"}
-  R -- "1 role" --> PR["Langsung ke portal:<br/>ADMIN ke /admin<br/>LECTURER ke /teacher<br/>USER ke /student"]
-  R -- "lebih dari 1" --> PICK["/ portal picker<br/>hanya portal yang diizinkan"]
-
-  %% ───────────── PENDAFTARAN EKSTERNAL ─────────────
-  subgraph REGF["Pendaftaran eksternal"]
-    direction TB
-    G1["/register: nama, email, password"] --> G2{"Cek email"}
-    G2 -- "domain maranatha.edu" --> G3["Tolak: gunakan tab Civitas Maranatha"]
-    G2 -- "sudah terdaftar" --> G4["Respons generik:<br/>silakan cek email Anda"]
-    G2 -- "baru" --> G5["Buat users: external, roles USER<br/>+ external_accounts, password di-hash<br/>+ auth_tokens verify_email, 24 jam"]
-    G5 --> G6["Kirim email berisi link verifikasi"]
-    G6 --> G7["/verify-email?token=..."]
-    G7 --> G8{"Hash cocok, belum dipakai,<br/>belum kedaluwarsa?"}
-    G8 -- tidak --> G9["Link tidak valid, minta kirim ulang"]
-    G8 -- ya --> G10["Set email_verified_at dan used_at"]
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
   end
-  G10 --> START
 
-  %% ───────────── LUPA PASSWORD ─────────────
-  subgraph FORGOT["Lupa password - eksternal"]
-    direction TB
-    P1["/forgot-password: email"] --> P2["Selalu respons generik<br/>jika email ada: auth_tokens reset_password, 1 jam"]
-    P2 --> P3["/reset-password?token=...<br/>password baru"]
-    P3 --> P4["Validasi token, simpan hash baru<br/>tandai used_at, cabut semua refresh_tokens user"]
-  end
-  P4 --> START
+  START(["Pengguna membuka halaman login LMS"]):::start --> TAB{"Jenis akun"}
 
-  %% ───────────── REFRESH & LOGOUT ─────────────
-  subgraph REF["Refresh dan logout - internal dan eksternal"]
+  %% ───────── INTERNAL ─────────
+  TAB -- "Civitas Maranatha" --> I1["Login dengan akun One Maranatha<br/>username dan password yang sama"]:::decided
+  subgraph INT["Login internal"]
     direction TB
-    F1["POST /api/auth/refresh<br/>cookie refresh_token"] --> F2{"Status token"}
-    F2 -- "valid" --> F3["Cabut token lama, terbitkan pasangan baru<br/>rotasi"]
-    F2 -- "kedaluwarsa / tidak ada" --> F4["401: arahkan ke /login"]
-    F2 -- "sudah dicabut tapi dipakai lagi" --> F5["Indikasi token dicuri:<br/>cabut semua refresh_tokens user"]
-    L1["POST /api/auth/logout"] --> L2["revoked_at = sekarang<br/>hapus cookie"]
+    I1 --> I2{"Akun valid di One Maranatha?"}
+    I2 -- Tidak --> I2x["Tampilkan: username / password salah"]
+    I2 -- Ya --> I3{"Status di One Maranatha"}:::pending
+    I3 -- "Mahasiswa aktif / cuti,<br/>dosen, reviewer akademik, admin" --> I4["Masuk sebagai internal<br/>nama, email, foto diperbarui dari One Maranatha"]:::decided
+    I3 -- "Lulus / keluar / DO" --> I5["Akun dikonversi menjadi eksternal<br/>riwayat belajar tetap tersimpan<br/>kursus terbuka tetap bisa diakses<br/>kelas akademik lama hanya bisa dilihat"]:::pending
+    I3 -- "Tidak punya akses LMS" --> I6["Akses ditolak"]
+    I5 --> I7["Login berikutnya lewat jalur eksternal"]
   end
+  NOTE1["Status mahasiswa butuh API data mahasiswa<br/>dari One Maranatha"]:::next
+  I3 -.- NOTE1
+
+  %% ───────── EKSTERNAL ─────────
+  TAB -- "Eksternal" --> E0{"Sudah punya akun?"}
+  subgraph EXT["Login dan pendaftaran eksternal"]
+    direction TB
+    E0 -- Belum --> R1["Daftar dengan akun Gmail"]:::decided
+    R1 --> R2{"Gmail sudah dipakai<br/>mahasiswa aktif?"}:::pending
+    R2 -- Ya --> R2x["Arahkan ke login Civitas Maranatha<br/>satu orang satu akun"]
+    R2 -- Tidak --> R3["Isi profil:<br/>nama, email, alamat, tingkat pendidikan"]:::decided
+    R3 --> R4["Link verifikasi dikirim ke email"]:::decided
+    R4 --> R5["Klik link: akun aktif<br/>tanpa persetujuan akademik"]:::decided
+    R5 --> E1
+    E0 -- Sudah --> E1["Login dengan Gmail"]
+    E1 --> E2{"Akun valid dan<br/>email sudah terverifikasi?"}
+    E2 -- Tidak --> E2x["Tampilkan alasan<br/>kirim ulang link verifikasi"]
+  end
+  NOTE2["Cara daftar Gmail: tombol Masuk dengan Google<br/>atau email + password, perlu konfirmasi"]:::pending
+  R1 -.- NOTE2
+
+  %% ───────── MASUK ─────────
+  I4 --> S1
+  E2 -- Ya --> S1["Masuk ke LMS"]:::good
+  S1 --> S2{"Peran pengguna"}
+  S2 -- "Admin" --> P1["Portal admin"]
+  S2 -- "Reviewer akademik" --> P2["Persetujuan kursus dan nilai"]
+  S2 -- "Dosen / pengajar" --> P3["Portal pengajar"]
+  S2 -- "Mahasiswa / peserta" --> P4["Portal belajar"]
+  S2 -- "Lebih dari satu peran" --> P5["Pilih portal"]
+
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef start fill:#1D4E89,color:#ffffff,stroke:#1D4E89
+  classDef good fill:#16A34A,color:#ffffff,stroke:#16A34A

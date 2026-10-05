@@ -3,110 +3,424 @@ Design sistem Learning Management System
 
 ## Flowchart LMS Universitas Kristen Maranatha
 
+Status keputusan: **biru** = sudah diputuskan, **kuning putus-putus** = perlu konfirmasi / usulan sementara, **abu-abu** = tahap pengembangan berikutnya.
+
 Render di GitHub, VS Code (ekstensi *Markdown Preview Mermaid Support*), atau tempel tiap blok ke https://mermaid.live.
 
-### 0. Gambaran Besar Seluruh Fitur
+### 0. Gambaran Besar
 
 ```mermaid
-%% Maranatha LMS — 0. Gambaran besar seluruh fitur
-%% Prinsip: satu kelas bisa campuran; jalur internal / eksternal ditentukan per enrollment
+%% LMS Universitas Kristen Maranatha — 0. Gambaran Besar
+%% Status keputusan per Oktober 2026: biru = sudah diputuskan, kuning putus-putus = perlu konfirmasi, abu-abu = tahap berikutnya
 flowchart TB
+
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
+  end
 
   subgraph AKTOR["Pengguna"]
     direction LR
-    U1["Mahasiswa internal"]
+    U1["Mahasiswa internal<br/>aktif / cuti"]
     U2["Dosen internal"]
-    U3["Admin LMS<br/>permission LMSADMIN"]
     U6["Reviewer akademik<br/>ACADEMICHEAD / SUPERUSERAKADEMIK"]
-    U4["Peserta eksternal"]
-    U5["Pengajar tamu eksternal"]
+    U3["Admin LMS"]
+    U4["Peserta eksternal<br/>termasuk alumni dan mantan mahasiswa"]
+    U5["Pengajar eksternal"]
   end
 
-  OM{{"One Maranatha / SAT<br/>akun, mata kuliah, KRS"}}
+  OM{{"One Maranatha<br/>akun, status mahasiswa, mata kuliah,<br/>KRS, CPL / CPMK / Sub-CPMK"}}
 
-  subgraph MLOGIN["1. Modul Login"]
-    direction LR
-    L1["Login internal<br/>kredensial SAT"]
-    L2["Login eksternal<br/>email + password<br/>daftar, verifikasi email, reset"]
-    L3["Satu jenis sesi LMS<br/>JWT access + refresh token<br/>roles: ADMIN / LECTURER / USER"]
+  subgraph MLOGIN["1. Login"]
+    direction TB
+    L1["Login internal<br/>akun yang sama dengan One Maranatha"]:::decided
+    L1b["Lulus / keluar / DO<br/>akun otomatis menjadi eksternal"]:::pending
+    L2["Daftar eksternal dengan Gmail<br/>verifikasi lewat email, tanpa persetujuan<br/>profil: nama, email, alamat, pendidikan"]:::decided
   end
 
-  subgraph MKURSUS["Kursus dan Enrollment"]
-    direction LR
-    K1["Kursus akademik<br/>dari mata kuliah One Maranatha<br/>dibuka untuk umum: disetujui akademik"]
-    K2["Kursus terbuka<br/>dibuat dosen, prodi, atau pengajar eksternal<br/>wajib disetujui akademik"]
-    K3["Enrollment<br/>internal: dari KRS / add-drop<br/>eksternal: daftar mandiri<br/>menentukan mode absensi dan skema nilai"]
+  subgraph MKURSUS["Kursus"]
+    direction TB
+    K1["Kelas akademik<br/>dari One Maranatha, ikut kalender semester"]:::decided
+    K1b["Dibuka untuk umum<br/>disetujui akademik, tanpa kuota"]:::decided
+    K2["Kursus terbuka<br/>dibuat dosen, prodi, atau pengajar eksternal<br/>disetujui akademik, tidak ikut kalender semester"]:::decided
+    K3["Pengajar eksternal di kelas akademik<br/>wajib SK dan penugasan resmi"]:::decided
   end
 
-  subgraph MBELAJAR["2. Modul Pembelajaran"]
-    direction LR
-    P1["Kelas akademik: terjadwal<br/>internal + eksternal, jadwal sama"]
-    P2["Kelas terbuka: kohort atau mandiri<br/>konten dari template yang sama"]
+  subgraph MBELAJAR["2. Pembelajaran"]
+    direction TB
+    P1["Kelas akademik terjadwal"]:::decided
+    P1b["Peserta eksternal di kelas campuran:<br/>ikut jadwal atau mandiri"]:::pending
+    P2["Kursus terbuka mandiri"]:::decided
+    P3["Asesmen boleh sama atau berbeda<br/>sesuai arahan pengajar"]:::decided
   end
 
-  subgraph MABSEN["3. Modul Absensi"]
-    direction LR
-    A1["Internal: check-in per pertemuan<br/>PRESENT / LATE / EXCUSED / ABSENT"]
-    A2["Eksternal: progres<br/>aktivitas wajib yang selesai"]
+  subgraph MABSEN["3. Absensi"]
+    direction TB
+    A1["Internal: check-in per pertemuan"]:::decided
+    A1b["Sumber resmi absensi internal:<br/>LMS atau One Maranatha"]:::pending
+    A2["Eksternal: progres aktivitas wajib"]:::decided
+    A3["Batas minimum diatur dosen"]:::decided
   end
 
-  subgraph MNILAI["4. Modul Penilaian"]
-    direction LR
-    N0["Input nilai per item asesmen<br/>sama untuk semua peserta"]
-    N1["Internal: OBE<br/>item, Sub-CPMK, CPMK, CPL<br/>+ nilai huruf"]
-    N2["Eksternal: konvensional<br/>bobot komponen, nilai akhir"]
+  subgraph MNILAI["4. Penilaian"]
+    direction TB
+    N0["Nilai diinput per item asesmen"]:::decided
+    N1["Internal: nilai angka + huruf<br/>finalisasi + persetujuan akademik, lalu terkunci"]:::pending
+    N1b["Capaian OBE / CPMK<br/>khusus internal, data dari One Maranatha"]:::next
+    N2["Eksternal: bobot komponen + nilai minimum lulus"]:::pending
+    N3["Skala huruf eksternal, remedial, banding"]:::next
   end
 
   subgraph MHASIL["5. Hasil"]
-    direction LR
-    H1["Internal: nilai final dikunci dosen pengampu<br/>+ laporan capaian OBE"]
-    H2["Eksternal: status COMPLETED / NOT PASSED<br/>+ sertifikat"]
+    direction TB
+    H1["Internal: nilai final"]:::decided
+    H1b["Kirim nilai dan absensi ke One Maranatha"]:::next
+    H2["Eksternal: status lulus + sertifikat"]:::decided
   end
 
-  subgraph MDASH["6. Dashboard dan Laporan"]
-    direction LR
-    D1["Dosen / pengajar"]
-    D2["Mahasiswa / peserta"]
-    D3["Admin: pengguna, master data,<br/>audit-log, laporan OBE"]
+  subgraph INTEG["Integrasi One Maranatha"]
+    direction TB
+    I1["Daftar API yang tersedia"]:::next
+    I2["Usulan: One Maranatha benar untuk data induk,<br/>LMS benar untuk aktivitas belajar"]:::pending
+    I3["Usulan: add/drop mengikuti One Maranatha,<br/>data belajar tidak dihapus"]:::pending
   end
 
   U1 --> L1
   U2 --> L1
   U3 --> L1
   U6 --> L1
-  U6 -. "setujui kursus" .-> MKURSUS
   U4 --> L2
   U5 --> L2
+  L1 --> L1b
+  L1b -.-> L2
   L1 -. "verifikasi akun" .-> OM
-  L1 --> L3
-  L2 --> L3
 
   OM -. "mata kuliah, KRS" .-> K1
-  L3 --> K3
-  K1 --> K3
-  K2 --> K3
+  K1 --> K1b
+  U6 -. "menyetujui" .-> K1b
+  U6 -. "menyetujui" .-> K2
+  K1 --> P1
+  K1b --> P1b
+  K2 --> P2
+  K3 --> P1
 
-  K3 -- "kelas akademik" --> P1
-  K3 -- "kelas terbuka" --> P2
-  MBELAJAR -- "internal" --> A1
-  MBELAJAR -- "eksternal" --> A2
+  P1 --> A1
+  P1b --> A2
+  P2 --> A2
+  A1 --- A1b
   P1 --> N0
   P2 --> N0
   A1 -. "syarat ikut UAS" .-> N1
-  N0 -- "internal" --> N1
-  N0 -- "eksternal" --> N2
   A2 -. "syarat selesai" .-> N2
+  N0 --> N1
+  N0 --> N2
+  N1 --> N1b
+  N2 --> N3
   N1 --> H1
+  H1 --> H1b
   N2 --> H2
-  H1 -. "kirim nilai, tahap berikutnya" .-> OM
+  H1b -.-> OM
+  OM -. "CPL / CPMK" .-> N1b
+  INTEG -.- OM
 
-  H1 --> MDASH
-  H2 --> MDASH
-  A1 --> MDASH
-  A2 --> MDASH
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
 ```
 
-### 1. Modul Login (Internal & Eksternal)
+### 1. Modul Login
+
+```mermaid
+%% LMS Universitas Kristen Maranatha — 1. Modul Login
+flowchart TD
+
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
+  end
+
+  START(["Pengguna membuka halaman login LMS"]):::start --> TAB{"Jenis akun"}
+
+  %% ───────── INTERNAL ─────────
+  TAB -- "Civitas Maranatha" --> I1["Login dengan akun One Maranatha<br/>username dan password yang sama"]:::decided
+  subgraph INT["Login internal"]
+    direction TB
+    I1 --> I2{"Akun valid di One Maranatha?"}
+    I2 -- Tidak --> I2x["Tampilkan: username / password salah"]
+    I2 -- Ya --> I3{"Status di One Maranatha"}:::pending
+    I3 -- "Mahasiswa aktif / cuti,<br/>dosen, reviewer akademik, admin" --> I4["Masuk sebagai internal<br/>nama, email, foto diperbarui dari One Maranatha"]:::decided
+    I3 -- "Lulus / keluar / DO" --> I5["Akun dikonversi menjadi eksternal<br/>riwayat belajar tetap tersimpan<br/>kursus terbuka tetap bisa diakses<br/>kelas akademik lama hanya bisa dilihat"]:::pending
+    I3 -- "Tidak punya akses LMS" --> I6["Akses ditolak"]
+    I5 --> I7["Login berikutnya lewat jalur eksternal"]
+  end
+  NOTE1["Status mahasiswa butuh API data mahasiswa<br/>dari One Maranatha"]:::next
+  I3 -.- NOTE1
+
+  %% ───────── EKSTERNAL ─────────
+  TAB -- "Eksternal" --> E0{"Sudah punya akun?"}
+  subgraph EXT["Login dan pendaftaran eksternal"]
+    direction TB
+    E0 -- Belum --> R1["Daftar dengan akun Gmail"]:::decided
+    R1 --> R2{"Gmail sudah dipakai<br/>mahasiswa aktif?"}:::pending
+    R2 -- Ya --> R2x["Arahkan ke login Civitas Maranatha<br/>satu orang satu akun"]
+    R2 -- Tidak --> R3["Isi profil:<br/>nama, email, alamat, tingkat pendidikan"]:::decided
+    R3 --> R4["Link verifikasi dikirim ke email"]:::decided
+    R4 --> R5["Klik link: akun aktif<br/>tanpa persetujuan akademik"]:::decided
+    R5 --> E1
+    E0 -- Sudah --> E1["Login dengan Gmail"]
+    E1 --> E2{"Akun valid dan<br/>email sudah terverifikasi?"}
+    E2 -- Tidak --> E2x["Tampilkan alasan<br/>kirim ulang link verifikasi"]
+  end
+  NOTE2["Cara daftar Gmail: tombol Masuk dengan Google<br/>atau email + password, perlu konfirmasi"]:::pending
+  R1 -.- NOTE2
+
+  %% ───────── MASUK ─────────
+  I4 --> S1
+  E2 -- Ya --> S1["Masuk ke LMS"]:::good
+  S1 --> S2{"Peran pengguna"}
+  S2 -- "Admin" --> P1["Portal admin"]
+  S2 -- "Reviewer akademik" --> P2["Persetujuan kursus dan nilai"]
+  S2 -- "Dosen / pengajar" --> P3["Portal pengajar"]
+  S2 -- "Mahasiswa / peserta" --> P4["Portal belajar"]
+  S2 -- "Lebih dari satu peran" --> P5["Pilih portal"]
+
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef start fill:#1D4E89,color:#ffffff,stroke:#1D4E89
+  classDef good fill:#16A34A,color:#ffffff,stroke:#16A34A
+```
+
+### 2. Modul Pembelajaran
+
+```mermaid
+%% LMS Universitas Kristen Maranatha — 2. Modul Pembelajaran
+flowchart TD
+
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
+  end
+
+  %% ───────── PEMBUATAN KELAS ─────────
+  subgraph BUAT["A. Pembuatan dan persetujuan kelas"]
+    direction TB
+    OMK["Mata kuliah dari One Maranatha"] --> KA["Kelas akademik<br/>mengikuti kalender semester"]:::decided
+    KA --> KB{"Dibuka untuk umum?"}
+    KB -- "Ya" --> AJU
+    KB -- "Tidak" --> SIAP
+
+    NEW(["Kursus terbuka baru"]) --> PEMBUAT["Dibuat oleh dosen internal,<br/>prodi, atau pengajar eksternal"]:::decided
+    PEMBUAT --> DRAFT["Susun materi, tugas, kuis<br/>tandai: untuk semua / khusus internal / khusus eksternal"]:::decided
+    DRAFT --> AJU["Ajukan persetujuan"]
+    AJU --> REV{"Reviewer akademik<br/>ACADEMICHEAD / SUPERUSERAKADEMIK<br/>tidak menyetujui ajuan sendiri"}:::decided
+    REV -- "Tolak + catatan" --> DRAFT
+    REV -- "Setujui" --> PUB["Dipublikasikan<br/>tanpa batas kuota"]:::decided
+    PUB --> SIAP["Kelas siap digunakan"]
+
+    PUB --> UBAH{"Perubahan setelah dipublikasikan"}
+    UBAH -- "Perbaikan materi" --> UB1["Langsung berlaku"]:::decided
+    UBAH -- "Judul, deskripsi,<br/>syarat kelulusan, sertifikat" --> UB2["Persetujuan ulang akademik<br/>versi lama tetap tayang"]:::decided
+
+    SK["Pengajar eksternal di kelas akademik<br/>wajib SK dan penugasan resmi,<br/>diperiksa akademik"]:::decided
+    SK -.-> KA
+  end
+
+  %% ───────── BELAJAR ─────────
+  SIAP --> START(["Peserta membuka kelas"]):::start
+  START --> B{"Terdaftar di kelas?"}
+  B -- Tidak --> B1["Akses ditolak"]
+  B -- Ya --> FIL["Tampilkan aktivitas sesuai jenis peserta<br/>asesmen boleh sama atau berbeda"]:::decided
+  FIL --> JK{"Jenis kelas"}
+
+  subgraph AKAD["B. Kelas akademik"]
+    direction TB
+    PT{"Jenis peserta"}
+    PT -- "Mahasiswa internal" --> M1["Ikut kalender semester<br/>modul dibuka per pertemuan, ada deadline"]:::decided
+    PT -- "Peserta eksternal" --> M2["Ikut jadwal semester (usulan)<br/>atau belajar mandiri"]:::pending
+    M1 --> M3["Pelajari materi, kerjakan tugas dan kuis"]
+    M2 --> M3
+    M3 --> M4["Akhir semester: kelas diarsipkan"]
+  end
+
+  subgraph TERB["C. Kursus terbuka"]
+    direction TB
+    T1["Belajar mandiri<br/>tidak mengikuti kalender semester"]:::decided
+    T1 --> T2["Pilih aktivitas: materi, kuis, tugas<br/>progres tersimpan, lanjut kapan saja"]
+    T2 --> T3{"Semua aktivitas wajib selesai?"}
+    T3 -- Belum --> T2
+    T3 -- Ya --> T4["Lanjut ke penilaian akhir"]
+    T5["Mahasiswa cuti, keluar, atau DO<br/>tetap bisa mengakses kursus terbuka"]:::decided
+    T5 -.-> T1
+  end
+
+  JK -- "Kelas akademik" --> PT
+  JK -- "Kursus terbuka" --> T1
+
+  PRIV["Pengajar eksternal hanya melihat peserta di kursusnya:<br/>nama, NRP, prodi, serta nilai dan aktivitas di kursus itu"]:::decided
+  START -.- PRIV
+
+  M3 -. "kehadiran / progres" .-> ABS["Ke Modul Absensi"]:::start
+  T2 -. "progres" .-> ABS
+  M4 --> NIL["Ke Modul Penilaian"]:::start
+  T4 --> NIL
+
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef start fill:#1D4E89,color:#ffffff,stroke:#1D4E89
+```
+
+### 3. Modul Absensi
+
+```mermaid
+%% LMS Universitas Kristen Maranatha — 3. Modul Absensi
+flowchart TD
+
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
+  end
+
+  START(["Peserta terdaftar di kelas"]):::start --> JP{"Jenis peserta"}
+
+  %% ───────── INTERNAL ─────────
+  subgraph INT["A. Mahasiswa internal: absensi per pertemuan"]
+    direction TB
+    D1["Dosen membuat pertemuan<br/>tatap muka / daring / asinkron"]:::decided
+    D1 --> D2{"Jenis pertemuan"}
+    D2 -- "Tatap muka" --> C1["Check-in dengan kode / QR<br/>yang berganti-ganti"]:::decided
+    D2 -- "Daring" --> C2["Check-in dengan tombol<br/>di sesi live"]:::decided
+    D2 -- "Asinkron" --> C3["Hadir jika aktivitas wajib<br/>selesai sebelum batas waktu"]:::decided
+    C1 --> ST{"Tepat waktu?"}
+    C2 --> ST
+    ST -- Ya --> H["HADIR"]:::good
+    ST -- Tidak --> L["TERLAMBAT"]:::warn
+    C3 --> H
+    DM["Dosen juga bisa mengisi manual"]:::decided
+    DM -.-> H
+
+    H --> TUTUP["Sesi ditutup"]
+    L --> TUTUP
+    TUTUP --> ABSEN["Yang belum tercatat otomatis TIDAK HADIR"]:::bad
+    ABSEN --> IZIN["Izin / sakit / dispensasi<br/>usulan: ajukan dengan bukti, dosen mengubah status"]:::pending
+    IZIN --> REKAP["Rekap persentase kehadiran"]
+    REKAP --> MIN{"Memenuhi batas minimum kehadiran?"}
+    MIN -- Ya --> UAS["Boleh ikut UAS"]:::good
+    MIN -- Tidak --> UAS2["Tidak memenuhi syarat UAS"]:::bad
+  end
+  MINNOTE["Batas minimum diatur dosen;<br/>untuk internal: ikut peraturan kampus 75 persen?"]:::pending
+  MIN -.- MINNOTE
+  SRC["Sumber resmi absensi internal:<br/>LMS atau One Maranatha"]:::pending
+  SYNC["Sinkron absensi ke One Maranatha"]:::next
+  REKAP -.- SRC
+  SRC -.- SYNC
+
+  %% ───────── EKSTERNAL ─────────
+  subgraph EXT["B. Peserta eksternal: progres, bukan absensi per pertemuan"]
+    direction TB
+    P1["Setiap aktivitas wajib yang selesai<br/>tercatat sebagai progres"]:::decided
+    P1 --> P2["Progres = aktivitas wajib selesai<br/>dibagi total aktivitas wajib"]
+    P2 --> P3{"Memenuhi batas minimum progres<br/>yang diatur dosen?"}:::decided
+    P3 -- Belum --> P4["Tampilkan sisa aktivitas"]
+    P3 -- Ya --> P5["Syarat penyelesaian terpenuhi"]:::good
+    P6["Perpanjangan deadline / masa akses<br/>oleh pengajar"]:::pending
+    P6 -.-> P1
+  end
+
+  JP -- "Mahasiswa internal" --> D1
+  JP -- "Peserta eksternal" --> P1
+  UAS --> NIL["Ke Modul Penilaian"]:::start
+  UAS2 --> NIL
+  P5 --> NIL
+
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef start fill:#1D4E89,color:#ffffff,stroke:#1D4E89
+  classDef good fill:#16A34A,color:#ffffff,stroke:#16A34A
+  classDef warn fill:#D97706,color:#ffffff,stroke:#D97706
+  classDef bad fill:#DC2626,color:#ffffff,stroke:#DC2626
+```
+
+### 4. Modul Penilaian
+
+```mermaid
+%% LMS Universitas Kristen Maranatha — 4. Modul Penilaian
+flowchart TD
+
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
+  end
+
+  %% ───────── PERSIAPAN & INPUT ─────────
+  subgraph PREP["A. Persiapan dan input nilai"]
+    direction TB
+    S1["Pengajar membuat tugas, kuis, UTS, UAS"]:::decided
+    S1 --> S2["Tandai tiap asesmen:<br/>untuk semua / khusus internal / khusus eksternal"]:::decided
+    S2 --> S3["Atur bobot nilai<br/>internal dan eksternal boleh berbeda"]:::decided
+    S3 --> S4["Nilai diinput per asesmen<br/>kuis otomatis, tugas dan ujian oleh pengajar"]:::decided
+  end
+
+  ABS["Dari Modul Absensi:<br/>syarat UAS / syarat penyelesaian"] -.-> S4
+  S4 --> JP{"Jenis peserta"}
+
+  %% ───────── INTERNAL ─────────
+  subgraph INT["B. Mahasiswa internal"]
+    direction TB
+    N1["Nilai akhir angka<br/>lalu nilai huruf skala kampus"]:::decided
+    N1 --> F0{"Siapa yang memfinalisasi?"}
+    F0 -- "Dosen pengampu internal" --> F1["Finalisasi nilai"]
+    F0 -- "Pengajar eksternal ber-SK" --> F2["Finalisasi nilai"]:::decided
+    F1 --> AP["Persetujuan akademik"]:::pending
+    F2 --> AP2["Persetujuan akademik"]:::decided
+    AP --> LOCK
+    AP2 --> LOCK["Nilai final dan terkunci<br/>usulan: perubahan hanya oleh akademik<br/>dengan alasan tercatat"]:::pending
+    LOCK --> KIRIM["Kirim nilai ke One Maranatha"]:::next
+    MP["Beberapa pengajar dalam satu kelas:<br/>usulan sementara, satu pengajar utama<br/>yang memfinalisasi"]:::pending
+    MP -.-> F0
+    OBE["Capaian OBE: Sub-CPMK, CPMK, CPL<br/>data kurikulum dari One Maranatha<br/>pemetaan asesmen ke Sub-CPMK"]:::next
+    N1 -.-> OBE
+  end
+
+  %% ───────── EKSTERNAL ─────────
+  subgraph EXT["C. Peserta eksternal"]
+    direction TB
+    E1["Usulan sementara:<br/>nilai akhir = bobot komponen<br/>yang diatur pengajar"]:::pending
+    E1 --> E2{"Aktivitas wajib selesai dan<br/>nilai akhir mencapai minimum?"}:::pending
+    E2 -- Ya --> E3["LULUS"]:::good
+    E2 -- Tidak --> E4["TIDAK LULUS"]:::bad
+    E3 --> E5["Sertifikat"]:::decided
+    E6["Tanpa capaian CPMK<br/>CPMK khusus mahasiswa internal"]:::decided
+    E6 -.-> E1
+  end
+
+  JP -- "Mahasiswa internal" --> N1
+  JP -- "Peserta eksternal" --> E1
+
+  NEXT["Ditunda ke tahap berikutnya:<br/>skala huruf eksternal, remedial,<br/>perbaikan dan banding nilai,<br/>keberatan atas rumus yang berbeda"]:::next
+  E4 -.-> NEXT
+  LOCK -.-> NEXT
+
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef good fill:#16A34A,color:#ffffff,stroke:#16A34A
+  classDef bad fill:#DC2626,color:#ffffff,stroke:#DC2626
+```
+
+### Lampiran Teknis: Detail Login
 
 ```mermaid
 %% Maranatha LMS — 1. Modul Login: internal (SAT / One Maranatha) dan eksternal (email)
@@ -183,266 +497,5 @@ flowchart TD
     F2 -- "sudah dicabut tapi dipakai lagi" --> F5["Indikasi token dicuri:<br/>cabut semua refresh_tokens user"]
     L1["POST /api/auth/logout"] --> L2["revoked_at = sekarang<br/>hapus cookie"]
   end
-```
 
-### 2. Modul Pembelajaran (Persetujuan Kursus, Kelas Akademik & Kelas Terbuka)
-
-```mermaid
-%% Maranatha LMS — 2. Modul Pembelajaran (v3: + persetujuan kursus oleh akademik)
-%% Prinsip: pacing ditetapkan PER KELAS, bukan per orang.
-%%   Kelas akademik = terjadwal, boleh campuran internal + eksternal.
-%%   Belajar mandiri = kelas terbuka terpisah yang memakai ulang konten dari template.
-flowchart TD
-
-  %% ───────── PEMBUATAN & PERSETUJUAN KELAS ─────────
-  OMK["Mata kuliah dari One Maranatha"] --> KA{"Dibuka untuk umum?"}
-  KA -- "Tidak, internal saja" --> K1["Kelas akademik<br/>pacing = SCHEDULED<br/>tanpa persetujuan tambahan"]
-  KA -- "Ya, diajukan dosen pengampu / prodi" --> C1
-  NEW(["Buat kursus terbuka baru"]) --> C0
-
-  subgraph BUAT["Pembuatan dan persetujuan - reviewer: ACADEMICHEAD / SUPERUSERAKADEMIK"]
-    direction TB
-    C0{"Siapa pembuat kursus terbuka?"}
-    C0 -- "Dosen internal / prodi" --> C1
-    C0 -- "Pengajar eksternal" --> CV{"Akun sudah diverifikasi<br/>sebagai pengajar eksternal?"}
-    CV -- Tidak --> CV1["Belum bisa membuat kursus<br/>ajukan verifikasi pengajar ke akademik"]
-    CV -- Ya --> C1
-    C1["Susun draft dari template<br/>modul, materi, tugas, bank soal<br/>audience tiap aktivitas<br/>status DRAFT"] --> C3["Ajukan persetujuan<br/>status MENUNGGU_PERSETUJUAN"]
-    C3 --> C4{"Reviewer akademik<br/>tidak boleh menyetujui kursus buatannya sendiri"}
-    C4 -- Tolak --> C5["DITOLAK + catatan<br/>kembali ke DRAFT"]
-    C5 --> C1
-    C4 -- Setujui --> C6["DIPUBLIKASI"]
-    C6 --> C7{"Perubahan setelah publikasi"}
-    C7 -- "Perbaikan materi" --> C8["Langsung berlaku<br/>tercatat di audit-log"]
-    C7 -- "Judul, deskripsi,<br/>syarat kelulusan, sertifikat" --> C9["Change request<br/>versi lama tetap tayang"]
-    C9 --> C10{"Reviewer menyetujui perubahan?"}
-    C10 -- Ya --> C11["Perubahan diterapkan"]
-    C10 -- Tidak --> C12["Ditolak + catatan<br/>versi lama tetap berlaku"]
-  end
-
-  C6 --> KT{"Jenis kelas yang dipublikasi"}
-  KT -- "Mata kuliah dibuka untuk umum" --> K1b["Kelas akademik campuran<br/>pacing = SCHEDULED<br/>keputusan BAA: eksternal ikut jadwal atau mandiri"]
-  KT -- "Kursus terbuka" --> K2{"Pacing kursus terbuka"}
-  K2 -- "Kohort" --> K3["Kelas terbuka terjadwal<br/>tanggal mulai dan selesai sendiri"]
-  K2 -- "Mandiri" --> K4["Kelas terbuka mandiri<br/>pacing = SELF_PACED<br/>access_days per peserta<br/>kuis pakai soal acak dari bank"]
-
-  K1 --> START
-  K1b --> START
-  K3 --> START
-  K4 --> START
-
-  %% ───────── MASUK KELAS ─────────
-  START(["Peserta membuka kelas"]) --> B{"Terdaftar di kelas?"}
-  B -- Tidak --> B1([Access Denied])
-  B -- Ya --> FIL["Server memfilter aktivitas<br/>sesuai participant_type vs audience<br/>aktivitas yang tidak sesuai tidak dikirim API"]
-  FIL --> PACE{"Pacing kelas"}
-
-  %% ───────── TERJADWAL (AKADEMIK / KOHORT) ─────────
-  PACE -- "SCHEDULED" --> S1
-  subgraph SCH["Terjadwal - semua peserta mengikuti jadwal yang sama, termasuk kelas campuran"]
-    direction TB
-    S1{"Modul sudah dibuka<br/>sesuai jadwal pertemuan?"} -- Belum --> S2["Tampilkan jadwal buka modul"]
-    S1 -- Ya --> S3["Pelajari materi dan video<br/>ikut diskusi forum<br/>forum hanya menampilkan nama"]
-    S3 --> S4{"Ada tugas / kuis?"}
-    S4 -- Tidak --> S11
-    S4 -- Ya --> S5{"Dikumpulkan sebelum deadline?"}
-    S5 -- Ya --> S6["Tersimpan<br/>kuis: dinilai otomatis<br/>tugas: menunggu penilaian"]
-    S5 -- Tidak --> S7{"Kebijakan keterlambatan"}
-    S7 -- "Diterima" --> S8["Tersimpan, ditandai TERLAMBAT<br/>penalti sesuai kebijakan"]
-    S7 -- "Ditolak" --> S9["Tidak bisa mengumpulkan<br/>nilai item = 0"]
-    S6 --> S10["Setelah deadline:<br/>pembahasan kuis dibuka untuk semua"]
-    S8 --> S10
-    S9 --> S10
-    S10 --> S11{"Masih ada pertemuan?"}
-    S11 -- Ya --> S1
-    S11 -- Tidak --> S12["Akhir periode kelas<br/>kelas diarsipkan, read-only<br/>untuk internal dan eksternal"]
-  end
-
-  %% ───────── MANDIRI (KELAS TERBUKA) ─────────
-  PACE -- "SELF_PACED" --> E1
-  subgraph SELF["Mandiri - hanya di kelas terbuka"]
-    direction TB
-    E1{"Akses masih berlaku?<br/>sekarang &lt;= access_ends_at"} -- Tidak --> E2(["Akses berakhir<br/>hasil tetap bisa dilihat"])
-    E1 -- Ya --> E3["Pilih aktivitas<br/>sistem menyarankan aktivitas wajib berikutnya"]
-    E3 --> E4{"Modul terbuka?<br/>prasyarat modul sebelumnya terpenuhi"}
-    E4 -- Tidak --> E5["Modul terkunci, tampilkan alasan"]
-    E5 --> E3
-    E4 -- Ya --> E6{"Jenis aktivitas"}
-    E6 -- "Materi / Video" --> E7{"Aturan selesai terpenuhi?"}
-    E7 -- Belum --> E8["Simpan posisi terakhir"]
-    E8 --> E3
-    E7 -- Ya --> E9["Catat activity_completions"]
-    E6 -- "Kuis" --> E10{"Skor &gt;= passing score?<br/>soal acak per percobaan"}
-    E10 -- Ya --> E9
-    E10 -- Tidak --> E11{"Sisa percobaan?"}
-    E11 -- Ya --> E3
-    E11 -- Tidak --> E12["Aktivitas wajib GAGAL permanen"]
-    E6 -- "Tugas" --> E13["Submit, status MENUNGGU REVIEW<br/>peserta boleh lanjut aktivitas lain"]
-    E13 -. "asinkron" .-> E14{"Pengajar: memenuhi kriteria?"}
-    E14 -- Ya --> E9
-    E14 -- Tidak --> E15{"Sisa revisi?"}
-    E15 -- Ya --> E13
-    E15 -- Tidak --> E12
-    E9 --> E16{"Semua aktivitas wajib selesai?"}
-    E16 -- Belum --> E3
-  end
-
-  %% ───────── KE MODUL LAIN ─────────
-  S3 -. "event belajar" .-> ABS["Ke Modul Absensi<br/>internal: check-in pertemuan<br/>eksternal: progres"]
-  E9 -. "event belajar" .-> ABS
-  S6 --> NIL["Ke Modul Penilaian<br/>internal: OBE<br/>eksternal: konvensional"]
-  S8 --> NIL
-  S9 --> NIL
-  S12 --> NIL
-  E16 -- Ya --> NIL
-  E12 --> NIL
-
-  NOTE["Kelas campuran = kelas akademik dengan peserta eksternal.<br/>Jadwal sama untuk semua; yang berbeda hanya<br/>absensi dan skema nilai per enrollment.<br/>Laporan OBE hanya menghitung peserta internal."]
-  K1b -.- NOTE
-
-  style START fill:#4F46E5,color:#fff
-  style C6 fill:#16A34A,color:#fff
-  style C5 fill:#DC2626,color:#fff
-  style FIL fill:#E5E7EB,color:#111
-  style E12 fill:#DC2626,color:#fff
-  style S9 fill:#DC2626,color:#fff
-  style NIL fill:#7C3AED,color:#fff
-  style ABS fill:#0891B2,color:#fff
-  style NOTE fill:#FEF3C7,color:#111
-```
-
-### 3. Modul Absensi (Internal & Eksternal)
-
-```mermaid
-%% Maranatha LMS — 3. Modul Absensi: internal (per pertemuan) dan eksternal (progres)
-%% Prinsip: kehadiran = check-in + jenis sesi; activity tracking hanya untuk progres dan analitik
-flowchart TD
-  START(["Peserta terdaftar di course"]) --> MODE{"attendance_mode<br/>pada enrollment"}
-
-  %% ───────── INTERNAL ─────────
-  MODE -- "MEETING - internal" --> M0
-  subgraph INT["Internal - per pertemuan, dibuat dosen pengampu"]
-    direction TB
-    M0["Dosen membuat pertemuan ke-n<br/>jenis: TATAP_MUKA / DARING_SINKRON / ASINKRON<br/>jadwal, modul terkait, toleransi terlambat"] --> M1{"Jenis sesi"}
-    M1 -- "Tatap muka / Daring sinkron" --> M2["Dosen membuka check-in<br/>kode / QR dinamis atau tombol check-in"]
-    M2 --> M3{"Mahasiswa check-in<br/>dalam jendela waktu?"}
-    M3 -- Tidak --> M4["Check-in ditutup<br/>ajukan izin / koreksi ke dosen"]
-    M3 -- Ya --> M5{"checked_in_at &lt;= mulai + toleransi?"}
-    M5 -- Ya --> PRESENT(["PRESENT"])
-    M5 -- Tidak --> LATE(["LATE"])
-    M1 -- "Asinkron" --> M6{"Aktivitas wajib modul sesi ini<br/>selesai sebelum batas sesi?"}
-    M6 -- Ya --> PRESENT
-  end
-
-  subgraph TUTUP["Penutupan sesi - dijalankan server"]
-    direction TB
-    Z1["Sesi mencapai batas waktu<br/>atau dosen menutup sesi"] --> Z2["Peserta tanpa status<br/>diberi ABSENT"]
-    Z2 --> Z3["Dosen koreksi bila perlu<br/>EXCUSED: izin / sakit + catatan<br/>tercatat di audit-log"]
-    Z3 --> Z4["Rekap: persentase kehadiran =<br/>PRESENT + LATE dibagi pertemuan selesai"]
-    Z4 --> Z5{"Memenuhi minimum kehadiran?<br/>misal 75 persen"}
-    Z5 -- Ya --> Z6["Boleh ikut UAS"]
-    Z5 -- Tidak --> Z7["Peringatan ke mahasiswa dan dosen<br/>status UAS sesuai kebijakan"]
-  end
-
-  PRESENT --> Z1
-  LATE --> Z1
-  M4 --> Z3
-
-  %% ───────── EKSTERNAL ─────────
-  MODE -- "PROGRESS - eksternal" --> P0
-  subgraph EXT["Eksternal - progres aktivitas, bukan check-in"]
-    direction TB
-    P0["Event belajar dari Modul Pembelajaran<br/>lesson_completed, quiz_passed,<br/>assignment_approved"] --> P1["Catat activity_completions<br/>sekali per aktivitas"]
-    P1 --> P2["Progres = aktivitas wajib selesai<br/>dibagi total aktivitas wajib<br/>dihitung saat dibaca"]
-    P2 --> P3{"Mencapai minimum progres?"}
-    P3 -- Belum --> P4["Tampilkan sisa aktivitas wajib"]
-    P3 -- Ya --> P5["Syarat penyelesaian terpenuhi"]
-    P6["Opsional: ikut sesi live kelas campuran<br/>tercatat, tidak wajib"] -.-> P0
-  end
-
-  Z6 --> NIL["Ke Modul Penilaian"]
-  Z7 --> NIL
-  P5 --> NIL
-
-  Z4 --> DASH["Dashboard<br/>dosen: rekap kehadiran dan progres<br/>peserta: status absensi / progres"]
-  P2 --> DASH
-
-  style START fill:#4F46E5,color:#fff
-  style PRESENT fill:#16A34A,color:#fff
-  style LATE fill:#F59E0B,color:#fff
-  style Z2 fill:#DC2626,color:#fff
-  style NIL fill:#7C3AED,color:#fff
-  style DASH fill:#0891B2,color:#fff
-```
-
-### 4. Modul Penilaian (OBE Internal & Konvensional Eksternal)
-
-```mermaid
-%% Maranatha LMS — 4. Modul Penilaian: internal OBE dan eksternal konvensional (tanpa OBE)
-%% Prinsip: nilai diinput SEKALI per item asesmen; skema enrollment menentukan cara menghitungnya
-flowchart TD
-
-  subgraph SETUP["Persiapan - dosen pengampu, sebelum kelas berjalan"]
-    direction TB
-    S1["Buat item asesmen<br/>kuis, tugas, UTS, UAS, proyek"] --> S2["Tentukan bobot item<br/>validasi: total = 100 persen"]
-    S2 --> S3{"Kursus akademik?"}
-    S3 -- Ya --> S4["Ambil CPL prodi, CPMK, Sub-CPMK<br/>sesuai RPS mata kuliah"]
-    S4 --> S5["Petakan tiap item ke Sub-CPMK + bobot<br/>validasi: setiap Sub-CPMK punya item"]
-    S5 --> S6["Kunci pemetaan<br/>hanya dosen pengampu / prodi yang bisa ubah"]
-    S3 -- Tidak --> S7["Tentukan nilai minimum lulus<br/>dan syarat sertifikat"]
-  end
-
-  subgraph INPUT["Input nilai - sama untuk semua peserta"]
-    direction TB
-    N1["Nilai per item<br/>kuis: otomatis<br/>tugas / UTS / UAS: dosen atau pengajar tamu, pakai rubrik"] --> N2["Simpan scores<br/>enrollment x item"]
-  end
-
-  S6 --> N1
-  S7 --> N1
-  ABS["Dari Modul Absensi<br/>kehadiran di bawah minimum: status UAS sesuai kebijakan"] -.-> N1
-  N2 --> MODE{"Skema penilaian enrollment"}
-
-  %% ───────── INTERNAL: OBE ─────────
-  MODE -- "OBE - internal" --> O1
-  subgraph OBE["Internal - OBE"]
-    direction TB
-    O1["Nilai akhir angka<br/>= jumlah nilai item x bobot item"] --> O2["Konversi ke nilai huruf<br/>skala resmi kampus"]
-    O1 --> O3["Capaian Sub-CPMK<br/>rata-rata berbobot item yang dipetakan"]
-    O3 --> O4["Agregasi ke CPMK"]
-    O4 --> O5["Agregasi ke CPL"]
-    O5 --> O6{"Ada CPMK di bawah ambang?"}
-    O6 -- Ya --> O7["Tandai CPMK belum tercapai<br/>remedial / evaluasi pembelajaran"]
-    O7 --> O8
-    O6 -- Tidak --> O8
-    O2 --> O8["Review dosen pengampu<br/>banding nilai dan remedial<br/>diproses sebelum finalisasi"]
-    O8 --> O9["Finalisasi nilai<br/>HANYA dosen pengampu internal<br/>nilai dikunci, perubahan lewat audit-log"]
-    O9 --> O10["Laporan capaian OBE<br/>per mahasiswa, kelas, prodi<br/>akses: REPORTOBE"]
-    O9 -.-> O11["Kirim nilai ke One Maranatha<br/>tahap berikutnya"]
-  end
-
-  %% ───────── EKSTERNAL: KONVENSIONAL ─────────
-  MODE -- "Konvensional - eksternal" --> K1
-  subgraph KONV["Eksternal - konvensional, tanpa OBE"]
-    direction TB
-    K1["Nilai akhir<br/>= jumlah nilai item x bobot item<br/>item dan bobot sama dengan internal"] --> K2{"Semua aktivitas wajib selesai<br/>dan nilai akhir &gt;= minimum lulus?"}
-    K2 -- Ya --> K3(["COMPLETED"])
-    K2 -- Tidak --> K4{"Masih ada aktivitas<br/>atau percobaan tersisa?"}
-    K4 -- Ya --> K5["Lanjut belajar<br/>kembali ke Modul Pembelajaran"]
-    K4 -- Tidak --> K6(["NOT PASSED<br/>opsi daftar ulang / ajukan ke pengajar"])
-    K3 --> K7{"Syarat sertifikat terpenuhi?"}
-    K7 -- Ya --> K8["Sertifikat<br/>kode verifikasi unik + QR<br/>opsional: cantumkan kompetensi"]
-    K7 -- Tidak --> K9["Completed tanpa sertifikat<br/>tampilkan syarat yang kurang"]
-  end
-
-  O10 --> DASH["Dashboard<br/>dosen: gradebook + capaian CPMK<br/>mahasiswa: nilai + capaian<br/>peserta eksternal: nilai + sertifikat"]
-  K8 --> DASH
-  K9 --> DASH
-  K6 --> DASH
-
-  style O9 fill:#7C3AED,color:#fff
-  style K3 fill:#16A34A,color:#fff
-  style K6 fill:#DC2626,color:#fff
-  style K8 fill:#CA8A04,color:#fff
-  style DASH fill:#0891B2,color:#fff
-  style S6 fill:#E5E7EB,color:#111
 ```

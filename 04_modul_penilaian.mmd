@@ -1,67 +1,64 @@
-%% Maranatha LMS — 4. Modul Penilaian: internal OBE dan eksternal konvensional (tanpa OBE)
-%% Prinsip: nilai diinput SEKALI per item asesmen; skema enrollment menentukan cara menghitungnya
+%% LMS Universitas Kristen Maranatha — 4. Modul Penilaian
 flowchart TD
 
-  subgraph SETUP["Persiapan - dosen pengampu, sebelum kelas berjalan"]
-    direction TB
-    S1["Buat item asesmen<br/>kuis, tugas, UTS, UAS, proyek"] --> S2["Tentukan bobot item<br/>validasi: total = 100 persen"]
-    S2 --> S3{"Kursus akademik?"}
-    S3 -- Ya --> S4["Ambil CPL prodi, CPMK, Sub-CPMK<br/>sesuai RPS mata kuliah"]
-    S4 --> S5["Petakan tiap item ke Sub-CPMK + bobot<br/>validasi: setiap Sub-CPMK punya item"]
-    S5 --> S6["Kunci pemetaan<br/>hanya dosen pengampu / prodi yang bisa ubah"]
-    S3 -- Tidak --> S7["Tentukan nilai minimum lulus<br/>dan syarat sertifikat"]
+  subgraph LEG["Keterangan"]
+    direction LR
+    LG1["Sudah diputuskan"]:::decided
+    LG2["Perlu konfirmasi / usulan sementara"]:::pending
+    LG3["Tahap pengembangan berikutnya"]:::next
   end
 
-  subgraph INPUT["Input nilai - sama untuk semua peserta"]
+  %% ───────── PERSIAPAN & INPUT ─────────
+  subgraph PREP["A. Persiapan dan input nilai"]
     direction TB
-    N1["Nilai per item<br/>kuis: otomatis<br/>tugas / UTS / UAS: dosen atau pengajar tamu, pakai rubrik"] --> N2["Simpan scores<br/>enrollment x item"]
+    S1["Pengajar membuat tugas, kuis, UTS, UAS"]:::decided
+    S1 --> S2["Tandai tiap asesmen:<br/>untuk semua / khusus internal / khusus eksternal"]:::decided
+    S2 --> S3["Atur bobot nilai<br/>internal dan eksternal boleh berbeda"]:::decided
+    S3 --> S4["Nilai diinput per asesmen<br/>kuis otomatis, tugas dan ujian oleh pengajar"]:::decided
   end
 
-  S6 --> N1
-  S7 --> N1
-  ABS["Dari Modul Absensi<br/>kehadiran di bawah minimum: status UAS sesuai kebijakan"] -.-> N1
-  N2 --> MODE{"Skema penilaian enrollment"}
+  ABS["Dari Modul Absensi:<br/>syarat UAS / syarat penyelesaian"] -.-> S4
+  S4 --> JP{"Jenis peserta"}
 
-  %% ───────── INTERNAL: OBE ─────────
-  MODE -- "OBE - internal" --> O1
-  subgraph OBE["Internal - OBE"]
+  %% ───────── INTERNAL ─────────
+  subgraph INT["B. Mahasiswa internal"]
     direction TB
-    O1["Nilai akhir angka<br/>= jumlah nilai item x bobot item"] --> O2["Konversi ke nilai huruf<br/>skala resmi kampus"]
-    O1 --> O3["Capaian Sub-CPMK<br/>rata-rata berbobot item yang dipetakan"]
-    O3 --> O4["Agregasi ke CPMK"]
-    O4 --> O5["Agregasi ke CPL"]
-    O5 --> O6{"Ada CPMK di bawah ambang?"}
-    O6 -- Ya --> O7["Tandai CPMK belum tercapai<br/>remedial / evaluasi pembelajaran"]
-    O7 --> O8
-    O6 -- Tidak --> O8
-    O2 --> O8["Review dosen pengampu<br/>banding nilai dan remedial<br/>diproses sebelum finalisasi"]
-    O8 --> O9["Finalisasi nilai<br/>HANYA dosen pengampu internal<br/>nilai dikunci, perubahan lewat audit-log"]
-    O9 --> O10["Laporan capaian OBE<br/>per mahasiswa, kelas, prodi<br/>akses: REPORTOBE"]
-    O9 -.-> O11["Kirim nilai ke One Maranatha<br/>tahap berikutnya"]
+    N1["Nilai akhir angka<br/>lalu nilai huruf skala kampus"]:::decided
+    N1 --> F0{"Siapa yang memfinalisasi?"}
+    F0 -- "Dosen pengampu internal" --> F1["Finalisasi nilai"]
+    F0 -- "Pengajar eksternal ber-SK" --> F2["Finalisasi nilai"]:::decided
+    F1 --> AP["Persetujuan akademik"]:::pending
+    F2 --> AP2["Persetujuan akademik"]:::decided
+    AP --> LOCK
+    AP2 --> LOCK["Nilai final dan terkunci<br/>usulan: perubahan hanya oleh akademik<br/>dengan alasan tercatat"]:::pending
+    LOCK --> KIRIM["Kirim nilai ke One Maranatha"]:::next
+    MP["Beberapa pengajar dalam satu kelas:<br/>usulan sementara, satu pengajar utama<br/>yang memfinalisasi"]:::pending
+    MP -.-> F0
+    OBE["Capaian OBE: Sub-CPMK, CPMK, CPL<br/>data kurikulum dari One Maranatha<br/>pemetaan asesmen ke Sub-CPMK"]:::next
+    N1 -.-> OBE
   end
 
-  %% ───────── EKSTERNAL: KONVENSIONAL ─────────
-  MODE -- "Konvensional - eksternal" --> K1
-  subgraph KONV["Eksternal - konvensional, tanpa OBE"]
+  %% ───────── EKSTERNAL ─────────
+  subgraph EXT["C. Peserta eksternal"]
     direction TB
-    K1["Nilai akhir<br/>= jumlah nilai item x bobot item<br/>item dan bobot sama dengan internal"] --> K2{"Semua aktivitas wajib selesai<br/>dan nilai akhir &gt;= minimum lulus?"}
-    K2 -- Ya --> K3(["COMPLETED"])
-    K2 -- Tidak --> K4{"Masih ada aktivitas<br/>atau percobaan tersisa?"}
-    K4 -- Ya --> K5["Lanjut belajar<br/>kembali ke Modul Pembelajaran"]
-    K4 -- Tidak --> K6(["NOT PASSED<br/>opsi daftar ulang / ajukan ke pengajar"])
-    K3 --> K7{"Syarat sertifikat terpenuhi?"}
-    K7 -- Ya --> K8["Sertifikat<br/>kode verifikasi unik + QR<br/>opsional: cantumkan kompetensi"]
-    K7 -- Tidak --> K9["Completed tanpa sertifikat<br/>tampilkan syarat yang kurang"]
+    E1["Usulan sementara:<br/>nilai akhir = bobot komponen<br/>yang diatur pengajar"]:::pending
+    E1 --> E2{"Aktivitas wajib selesai dan<br/>nilai akhir mencapai minimum?"}:::pending
+    E2 -- Ya --> E3["LULUS"]:::good
+    E2 -- Tidak --> E4["TIDAK LULUS"]:::bad
+    E3 --> E5["Sertifikat"]:::decided
+    E6["Tanpa capaian CPMK<br/>CPMK khusus mahasiswa internal"]:::decided
+    E6 -.-> E1
   end
 
-  O10 --> DASH["Dashboard<br/>dosen: gradebook + capaian CPMK<br/>mahasiswa: nilai + capaian<br/>peserta eksternal: nilai + sertifikat"]
-  K8 --> DASH
-  K9 --> DASH
-  K6 --> DASH
+  JP -- "Mahasiswa internal" --> N1
+  JP -- "Peserta eksternal" --> E1
 
-  style O9 fill:#7C3AED,color:#fff
-  style K3 fill:#16A34A,color:#fff
-  style K6 fill:#DC2626,color:#fff
-  style K8 fill:#CA8A04,color:#fff
-  style DASH fill:#0891B2,color:#fff
-  style S6 fill:#E5E7EB,color:#111
+  NEXT["Ditunda ke tahap berikutnya:<br/>skala huruf eksternal, remedial,<br/>perbaikan dan banding nilai,<br/>keberatan atas rumus yang berbeda"]:::next
+  E4 -.-> NEXT
+  LOCK -.-> NEXT
+
+  classDef decided fill:#E3EEFA,stroke:#1D4E89,color:#0F2540
+  classDef pending fill:#FFF4D6,stroke:#B7791F,stroke-dasharray:5 3,color:#3D2A00
+  classDef next fill:#EFEFEF,stroke:#8A8A8A,stroke-dasharray:2 3,color:#444444
+  classDef good fill:#16A34A,color:#ffffff,stroke:#16A34A
+  classDef bad fill:#DC2626,color:#ffffff,stroke:#DC2626
