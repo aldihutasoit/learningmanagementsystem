@@ -1,0 +1,96 @@
+%% Maranatha LMS — 0. Gambaran besar seluruh fitur
+%% Prinsip: satu kelas bisa campuran; jalur internal / eksternal ditentukan per enrollment
+flowchart TB
+
+  subgraph AKTOR["Pengguna"]
+    direction LR
+    U1["Mahasiswa internal"]
+    U2["Dosen internal"]
+    U3["Admin LMS<br/>permission LMSADMIN"]
+    U6["Reviewer akademik<br/>ACADEMICHEAD / SUPERUSERAKADEMIK"]
+    U4["Peserta eksternal"]
+    U5["Pengajar tamu eksternal"]
+  end
+
+  OM{{"One Maranatha / SAT<br/>akun, mata kuliah, KRS"}}
+
+  subgraph MLOGIN["1. Modul Login"]
+    direction LR
+    L1["Login internal<br/>kredensial SAT"]
+    L2["Login eksternal<br/>email + password<br/>daftar, verifikasi email, reset"]
+    L3["Satu jenis sesi LMS<br/>JWT access + refresh token<br/>roles: ADMIN / LECTURER / USER"]
+  end
+
+  subgraph MKURSUS["Kursus dan Enrollment"]
+    direction LR
+    K1["Kursus akademik<br/>dari mata kuliah One Maranatha<br/>dibuka untuk umum: disetujui akademik"]
+    K2["Kursus terbuka<br/>dibuat dosen, prodi, atau pengajar eksternal<br/>wajib disetujui akademik"]
+    K3["Enrollment<br/>internal: dari KRS / add-drop<br/>eksternal: daftar mandiri<br/>menentukan mode absensi dan skema nilai"]
+  end
+
+  subgraph MBELAJAR["2. Modul Pembelajaran"]
+    direction LR
+    P1["Kelas akademik: terjadwal<br/>internal + eksternal, jadwal sama"]
+    P2["Kelas terbuka: kohort atau mandiri<br/>konten dari template yang sama"]
+  end
+
+  subgraph MABSEN["3. Modul Absensi"]
+    direction LR
+    A1["Internal: check-in per pertemuan<br/>PRESENT / LATE / EXCUSED / ABSENT"]
+    A2["Eksternal: progres<br/>aktivitas wajib yang selesai"]
+  end
+
+  subgraph MNILAI["4. Modul Penilaian"]
+    direction LR
+    N0["Input nilai per item asesmen<br/>sama untuk semua peserta"]
+    N1["Internal: OBE<br/>item, Sub-CPMK, CPMK, CPL<br/>+ nilai huruf"]
+    N2["Eksternal: konvensional<br/>bobot komponen, nilai akhir"]
+  end
+
+  subgraph MHASIL["5. Hasil"]
+    direction LR
+    H1["Internal: nilai final dikunci dosen pengampu<br/>+ laporan capaian OBE"]
+    H2["Eksternal: status COMPLETED / NOT PASSED<br/>+ sertifikat"]
+  end
+
+  subgraph MDASH["6. Dashboard dan Laporan"]
+    direction LR
+    D1["Dosen / pengajar"]
+    D2["Mahasiswa / peserta"]
+    D3["Admin: pengguna, master data,<br/>audit-log, laporan OBE"]
+  end
+
+  U1 --> L1
+  U2 --> L1
+  U3 --> L1
+  U6 --> L1
+  U6 -. "setujui kursus" .-> MKURSUS
+  U4 --> L2
+  U5 --> L2
+  L1 -. "verifikasi akun" .-> OM
+  L1 --> L3
+  L2 --> L3
+
+  OM -. "mata kuliah, KRS" .-> K1
+  L3 --> K3
+  K1 --> K3
+  K2 --> K3
+
+  K3 -- "kelas akademik" --> P1
+  K3 -- "kelas terbuka" --> P2
+  MBELAJAR -- "internal" --> A1
+  MBELAJAR -- "eksternal" --> A2
+  P1 --> N0
+  P2 --> N0
+  A1 -. "syarat ikut UAS" .-> N1
+  N0 -- "internal" --> N1
+  N0 -- "eksternal" --> N2
+  A2 -. "syarat selesai" .-> N2
+  N1 --> H1
+  N2 --> H2
+  H1 -. "kirim nilai, tahap berikutnya" .-> OM
+
+  H1 --> MDASH
+  H2 --> MDASH
+  A1 --> MDASH
+  A2 --> MDASH

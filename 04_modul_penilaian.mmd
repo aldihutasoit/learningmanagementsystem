@@ -1,0 +1,67 @@
+%% Maranatha LMS — 4. Modul Penilaian: internal OBE dan eksternal konvensional (tanpa OBE)
+%% Prinsip: nilai diinput SEKALI per item asesmen; skema enrollment menentukan cara menghitungnya
+flowchart TD
+
+  subgraph SETUP["Persiapan - dosen pengampu, sebelum kelas berjalan"]
+    direction TB
+    S1["Buat item asesmen<br/>kuis, tugas, UTS, UAS, proyek"] --> S2["Tentukan bobot item<br/>validasi: total = 100 persen"]
+    S2 --> S3{"Kursus akademik?"}
+    S3 -- Ya --> S4["Ambil CPL prodi, CPMK, Sub-CPMK<br/>sesuai RPS mata kuliah"]
+    S4 --> S5["Petakan tiap item ke Sub-CPMK + bobot<br/>validasi: setiap Sub-CPMK punya item"]
+    S5 --> S6["Kunci pemetaan<br/>hanya dosen pengampu / prodi yang bisa ubah"]
+    S3 -- Tidak --> S7["Tentukan nilai minimum lulus<br/>dan syarat sertifikat"]
+  end
+
+  subgraph INPUT["Input nilai - sama untuk semua peserta"]
+    direction TB
+    N1["Nilai per item<br/>kuis: otomatis<br/>tugas / UTS / UAS: dosen atau pengajar tamu, pakai rubrik"] --> N2["Simpan scores<br/>enrollment x item"]
+  end
+
+  S6 --> N1
+  S7 --> N1
+  ABS["Dari Modul Absensi<br/>kehadiran di bawah minimum: status UAS sesuai kebijakan"] -.-> N1
+  N2 --> MODE{"Skema penilaian enrollment"}
+
+  %% ───────── INTERNAL: OBE ─────────
+  MODE -- "OBE - internal" --> O1
+  subgraph OBE["Internal - OBE"]
+    direction TB
+    O1["Nilai akhir angka<br/>= jumlah nilai item x bobot item"] --> O2["Konversi ke nilai huruf<br/>skala resmi kampus"]
+    O1 --> O3["Capaian Sub-CPMK<br/>rata-rata berbobot item yang dipetakan"]
+    O3 --> O4["Agregasi ke CPMK"]
+    O4 --> O5["Agregasi ke CPL"]
+    O5 --> O6{"Ada CPMK di bawah ambang?"}
+    O6 -- Ya --> O7["Tandai CPMK belum tercapai<br/>remedial / evaluasi pembelajaran"]
+    O7 --> O8
+    O6 -- Tidak --> O8
+    O2 --> O8["Review dosen pengampu<br/>banding nilai dan remedial<br/>diproses sebelum finalisasi"]
+    O8 --> O9["Finalisasi nilai<br/>HANYA dosen pengampu internal<br/>nilai dikunci, perubahan lewat audit-log"]
+    O9 --> O10["Laporan capaian OBE<br/>per mahasiswa, kelas, prodi<br/>akses: REPORTOBE"]
+    O9 -.-> O11["Kirim nilai ke One Maranatha<br/>tahap berikutnya"]
+  end
+
+  %% ───────── EKSTERNAL: KONVENSIONAL ─────────
+  MODE -- "Konvensional - eksternal" --> K1
+  subgraph KONV["Eksternal - konvensional, tanpa OBE"]
+    direction TB
+    K1["Nilai akhir<br/>= jumlah nilai item x bobot item<br/>item dan bobot sama dengan internal"] --> K2{"Semua aktivitas wajib selesai<br/>dan nilai akhir &gt;= minimum lulus?"}
+    K2 -- Ya --> K3(["COMPLETED"])
+    K2 -- Tidak --> K4{"Masih ada aktivitas<br/>atau percobaan tersisa?"}
+    K4 -- Ya --> K5["Lanjut belajar<br/>kembali ke Modul Pembelajaran"]
+    K4 -- Tidak --> K6(["NOT PASSED<br/>opsi daftar ulang / ajukan ke pengajar"])
+    K3 --> K7{"Syarat sertifikat terpenuhi?"}
+    K7 -- Ya --> K8["Sertifikat<br/>kode verifikasi unik + QR<br/>opsional: cantumkan kompetensi"]
+    K7 -- Tidak --> K9["Completed tanpa sertifikat<br/>tampilkan syarat yang kurang"]
+  end
+
+  O10 --> DASH["Dashboard<br/>dosen: gradebook + capaian CPMK<br/>mahasiswa: nilai + capaian<br/>peserta eksternal: nilai + sertifikat"]
+  K8 --> DASH
+  K9 --> DASH
+  K6 --> DASH
+
+  style O9 fill:#7C3AED,color:#fff
+  style K3 fill:#16A34A,color:#fff
+  style K6 fill:#DC2626,color:#fff
+  style K8 fill:#CA8A04,color:#fff
+  style DASH fill:#0891B2,color:#fff
+  style S6 fill:#E5E7EB,color:#111

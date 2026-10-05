@@ -1,0 +1,74 @@
+%% Maranatha LMS — 1. Modul Login: internal (SAT / One Maranatha) dan eksternal (email)
+%% Render: https://mermaid.live
+flowchart TD
+
+  START(["Pengguna membuka /login"]) --> TAB{"Pilih tab"}
+
+  %% ───────────── INTERNAL (SAT) ─────────────
+  TAB -- "Civitas Maranatha" --> I1["Browser: POST SAT /login<br/>username, password, version: latest"]
+  I1 --> I2{"SAT menerima?"}
+  I2 -- tidak --> IERR["Tampilkan: username / password SAT salah"]
+  I2 -- ya --> I3["Browser: POST /api/auth/sat/session<br/>body: bearer SAT"]
+  I3 --> I4["Backend: GET SAT /data dengan bearer<br/>bearer tidak disimpan"]
+  I4 --> I5{"isblocked = 0 dan permissions memuat<br/>MAHASISWA / DOSEN / LMSADMIN?"}
+  I5 -- tidak --> I403["403: akun tidak punya akses LMS"]
+  I5 -- ya --> I6["Upsert users + internal_accounts by om_user_id<br/>timpa nama, email, permissions, foto, synced_at<br/>users.roles = petakan permissions"]
+  I6 --> ST
+
+  %% ───────────── EKSTERNAL (EMAIL) ─────────────
+  TAB -- "Akun Eksternal" --> E1["Browser: POST /api/auth/login<br/>email, password"]
+  E1 --> E2{"Email ada di external_accounts?"}
+  E2 -- tidak --> EERR["401: email atau password salah<br/>pesan sama untuk semua kasus"]
+  E2 -- ya --> E3{"locked_until > sekarang?"}
+  E3 -- ya --> ELOCK["423: akun dikunci sementara, coba lagi nanti"]
+  E3 -- tidak --> E4{"Password cocok? bcrypt.compare"}
+  E4 -- tidak --> E5["failed_login_count + 1<br/>jika 5 kali atau lebih: locked_until = sekarang + 15 menit"]
+  E5 --> EERR
+  E4 -- ya --> E6{"email_verified_at terisi?"}
+  E6 -- tidak --> EVER["403: verifikasi email dulu<br/>tombol kirim ulang link"]
+  E6 -- ya --> E7["failed_login_count = 0, locked_until = NULL"]
+  E7 --> ST
+
+  %% ───────────── SESI (SAMA UNTUK KEDUANYA) ─────────────
+  ST{"users.status = active<br/>dan dflag = false?"}
+  ST -- tidak --> SUS["403: akun dinonaktifkan admin LMS"]
+  ST -- ya --> T1["TokenService<br/>access JWT 15 menit: sub, roles, user_type<br/>refresh token acak, simpan hash di refresh_tokens"]
+  T1 --> T2["Response: accessToken di body<br/>Set-Cookie refresh_token httpOnly"]
+  T2 --> T3["Update last_login_at<br/>catat audit-log LOGIN"]
+  T3 --> R{"Jumlah roles"}
+  R -- "1 role" --> PR["Langsung ke portal:<br/>ADMIN ke /admin<br/>LECTURER ke /teacher<br/>USER ke /student"]
+  R -- "lebih dari 1" --> PICK["/ portal picker<br/>hanya portal yang diizinkan"]
+
+  %% ───────────── PENDAFTARAN EKSTERNAL ─────────────
+  subgraph REGF["Pendaftaran eksternal"]
+    direction TB
+    G1["/register: nama, email, password"] --> G2{"Cek email"}
+    G2 -- "domain maranatha.edu" --> G3["Tolak: gunakan tab Civitas Maranatha"]
+    G2 -- "sudah terdaftar" --> G4["Respons generik:<br/>silakan cek email Anda"]
+    G2 -- "baru" --> G5["Buat users: external, roles USER<br/>+ external_accounts, password di-hash<br/>+ auth_tokens verify_email, 24 jam"]
+    G5 --> G6["Kirim email berisi link verifikasi"]
+    G6 --> G7["/verify-email?token=..."]
+    G7 --> G8{"Hash cocok, belum dipakai,<br/>belum kedaluwarsa?"}
+    G8 -- tidak --> G9["Link tidak valid, minta kirim ulang"]
+    G8 -- ya --> G10["Set email_verified_at dan used_at"]
+  end
+  G10 --> START
+
+  %% ───────────── LUPA PASSWORD ─────────────
+  subgraph FORGOT["Lupa password - eksternal"]
+    direction TB
+    P1["/forgot-password: email"] --> P2["Selalu respons generik<br/>jika email ada: auth_tokens reset_password, 1 jam"]
+    P2 --> P3["/reset-password?token=...<br/>password baru"]
+    P3 --> P4["Validasi token, simpan hash baru<br/>tandai used_at, cabut semua refresh_tokens user"]
+  end
+  P4 --> START
+
+  %% ───────────── REFRESH & LOGOUT ─────────────
+  subgraph REF["Refresh dan logout - internal dan eksternal"]
+    direction TB
+    F1["POST /api/auth/refresh<br/>cookie refresh_token"] --> F2{"Status token"}
+    F2 -- "valid" --> F3["Cabut token lama, terbitkan pasangan baru<br/>rotasi"]
+    F2 -- "kedaluwarsa / tidak ada" --> F4["401: arahkan ke /login"]
+    F2 -- "sudah dicabut tapi dipakai lagi" --> F5["Indikasi token dicuri:<br/>cabut semua refresh_tokens user"]
+    L1["POST /api/auth/logout"] --> L2["revoked_at = sekarang<br/>hapus cookie"]
+  end
